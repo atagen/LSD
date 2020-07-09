@@ -64,15 +64,17 @@ def main():
     parser = GooeyParser(description="Lossy Sound Destroyer")
     parser.add_argument('filepath', type=str, help='the input file', widget='FileChooser')
     parser.add_argument('codec', type=str, help='the name of the codec to use', choices=codec_list)
-    parser.add_argument('bitrate', type=int, help='the desired bitrate (not guaranteed)')
+    parser.add_argument('bitrate', type=int, help='the desired bitrate (not guaranteed), usually between 4-320kbps')
+    parser.add_argument('quality', type=int, help='usually from 0-51 (best-worst), only works on some codecs')
     parser.add_argument('glitch', type=int, help='amount to glitch (1 is a lot, 10000 is not, 0 is none)')
+    
     args = parser.parse_args()
     
-    doRoundtrip(args.filepath, args.codec, args.bitrate, args.glitch)
+    doRoundtrip(args.filepath, args.codec, args.bitrate, args.quality, args.glitch)
     
        
 
-def doRoundtrip(filepath, codec, bitrate, glitch):
+def doRoundtrip(filepath, codec, bitrate, qual, glitch):
 
     bitrate = bitrate if (bitrate >= bitrate_lower_limit[codec]) else bitrate_lower_limit[codec]
     fmt = output_fmt[codec]
@@ -85,7 +87,7 @@ def doRoundtrip(filepath, codec, bitrate, glitch):
             encoded, _ = (
                 ffmpeg
                 .input(filepath)
-                .output('pipe:',format=fmt,acodec=codec,audio_bitrate=str(bitrate)+'k',**{'bsf': f"noise={glitch}"},**extraopts)
+                .output('pipe:',q=qual,format=fmt,acodec=codec,audio_bitrate=str(bitrate)+'k',**{'bsf': f"noise={glitch}"},**extraopts)
                 .global_args('-hide_banner','-loglevel','error')
                 .run(capture_stdout=True)
                 )
@@ -102,7 +104,7 @@ def doRoundtrip(filepath, codec, bitrate, glitch):
             print(e.stderr)
         return
         
-    newfilepath = splitpath(filepath)[0] + "_" + codec + "_" + str(bitrate) + "k_" + str(glitch) + ".wav"
+    newfilepath = splitpath(filepath)[0] + "_" + codec + "_" + str(bitrate) + "k_q" + str(qual) + "_" + str(glitch) + ".wav"
     
     decoded, _ = (
         ffmpeg
